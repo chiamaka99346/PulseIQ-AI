@@ -765,8 +765,8 @@
             <!-- DASHBOARD -->
             <section class="page-sec active" id="page-dashboard">
                 <div class="welcome-banner">
-                    <div class="wb-text"><h2 id="welcomeMsg">Good morning, Chiamaka!</h2><p>You have <strong>3 AI alerts</strong> and <strong>2 tasks</strong> due today.</p></div>
-                    <div class="wb-badge">Top Performer · Q4 2024</div>
+                    <div class="wb-text"><h2 id="welcomeMsg">Good morning, Chiamaka!</h2><p id="welcomeSubMsg">You have <strong>3 AI alerts</strong> and <strong>2 tasks</strong> due today.</p></div>
+                    <div class="wb-badge" id="portfolioBadge">Calculating...</div>
                 </div>
                 <div class="kpi-grid">
                     <div class="kpi-card kc-purple">
@@ -1448,6 +1448,52 @@ function navigate(page) {
 // ================================================================
 // DASHBOARD
 // ================================================================
+function updatePortfolioBadge() {
+    const badge = document.getElementById('portfolioBadge');
+    const subMsg = document.getElementById('welcomeSubMsg');
+    if (!badge) return;
+
+    const total = ACCOUNTS.length;
+    if (!total) return;
+
+    const avgHealth = Math.round(ACCOUNTS.reduce((s, a) => s + a.health, 0) / total);
+    const atRisk    = ACCOUNTS.filter(a => a.health < 60).length;
+    const critical  = ACCOUNTS.filter(a => a.health < 50).length;
+    const healthy   = ACCOUNTS.filter(a => a.health >= 80).length;
+    const expanding = ACCOUNTS.filter(a => a.stage === 'Expanding').length;
+
+    let label, color;
+
+    if (critical > 0) {
+        label = 'Critical Accounts Need Action';
+        color = 'background:linear-gradient(135deg,#EF4444,#F87171);';
+    } else if (atRisk > 1) {
+        label = 'Portfolio Health: At Risk';
+        color = 'background:linear-gradient(135deg,#F59E0B,#FCD34D);';
+    } else if (avgHealth >= 80 && atRisk === 0) {
+        label = 'Portfolio Health: Excellent';
+        color = 'background:linear-gradient(135deg,#10B981,#34D399);';
+    } else if (avgHealth >= 70) {
+        label = 'Portfolio Health: Good';
+        color = 'background:linear-gradient(135deg,#06B6D4,#38BDF8);';
+    } else {
+        label = 'Portfolio Health: Needs Attention';
+        color = 'background:linear-gradient(135deg,#F59E0B,#FCD34D);';
+    }
+
+    badge.style.cssText = color + 'padding:9px 18px;border-radius:22px;font-size:12px;font-weight:600;white-space:nowrap;color:white;';
+    badge.textContent = label + ' · Avg ' + avgHealth;
+
+    // Update subtitle with live counts
+    const alerts = atRisk + critical;
+    if (subMsg) {
+        subMsg.innerHTML = 'Portfolio avg health <strong>' + avgHealth + '</strong> · '
+            + '<strong>' + healthy + '</strong> healthy · '
+            + '<strong>' + atRisk + '</strong> at risk'
+            + (expanding > 0 ? ' · <strong>' + expanding + '</strong> expanding' : '');
+    }
+}
+
 function renderDashAccts() {
     const el = document.getElementById('dashAcctList');
     el.innerHTML = ACCOUNTS.map(a => {
@@ -1458,6 +1504,7 @@ function renderDashAccts() {
             <div class="chip ${chipCls}">${a.health}</div>
         </div>`;
     }).join('');
+    updatePortfolioBadge();
 }
 
 // ================================================================
@@ -1588,6 +1635,7 @@ function updateKPIs() {
     const tot = ACCOUNTS.reduce((s,a)=>s+(a.arrNum||0),0);
     document.getElementById('kpiArr').textContent = tot>=1000?'$'+(tot/1000).toFixed(1)+'M':'$'+tot+'K';
     const r=document.getElementById('rptAccounts'); if(r) r.textContent=ACCOUNTS.length;
+    updatePortfolioBadge();
 }
 
 function importAccountFromFile(e) {
