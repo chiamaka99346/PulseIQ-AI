@@ -367,6 +367,42 @@
 
         @media (max-width:1100px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } .ins-grid { grid-template-columns:repeat(2,1fr); } .int-grid { grid-template-columns:repeat(2,1fr); } .dash-bottom { grid-template-columns:1fr 1fr; } }
         @media (max-width:800px) { .dash-grid { grid-template-columns:1fr; } .set-layout { grid-template-columns:1fr; } .pb-grid { grid-template-columns:1fr; } }
+
+        /* ── MOBILE RESPONSIVE ── */
+        .mob-menu-btn { display:none; width:34px; height:34px; background:var(--bg-card2); border:1px solid var(--border); border-radius:8px; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); flex-shrink:0; }
+        .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99; }
+
+        @media (max-width:768px) {
+            .mob-menu-btn { display:flex; }
+            .sidebar { transform:translateX(-100%); transition:transform 0.3s ease; z-index:200; }
+            .sidebar.mob-open { transform:translateX(0); }
+            .sidebar-overlay.mob-open { display:block; }
+            .main-content { margin-left:0; }
+            .topbar { padding:0 14px; gap:10px; }
+            .page-title h1 { font-size:15px; }
+            .content { padding:14px; }
+            .kpi-grid { grid-template-columns:repeat(2,1fr); gap:10px; }
+            .kpi-val { font-size:20px; }
+            .dash-grid { grid-template-columns:1fr; }
+            .dash-bottom { grid-template-columns:1fr; }
+            .tbl-head { display:none; }
+            .tbl-row { grid-template-columns:1fr; gap:6px; padding:12px 14px; }
+            .tbl-row .tcell:not(:first-child) { font-size:12px; }
+            .ins-grid { grid-template-columns:1fr; }
+            .pb-grid { grid-template-columns:1fr; }
+            .int-grid { grid-template-columns:1fr; }
+            .set-layout { grid-template-columns:1fr; }
+            .set-nav { position:static; }
+            .welcome-banner { flex-direction:column; gap:12px; align-items:flex-start; }
+            .auth-card { padding:28px 20px; margin:16px; }
+            .modal { margin:10px; }
+            .modal-body { padding:16px; }
+            .modal-head { padding:16px; }
+            .modal-foot { padding:12px 16px; }
+            .grid-2 { grid-template-columns:1fr; }
+            .ad-stat-grid { grid-template-columns:repeat(3,1fr); gap:8px; }
+            .theme-options { grid-template-columns:repeat(2,1fr); }
+        }
     </style>
 </head>
 <body>
@@ -657,7 +693,8 @@
 
 <!-- MAIN APP -->
 <div class="app-wrapper" id="mainApp" style="display:none;">
-    <aside class="sidebar">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+    <aside class="sidebar" id="mainSidebar">
         <div class="sidebar-logo"><div class="logo-icon">⚡</div><div class="logo-text"><h2>PulseIQ AI</h2><span>Success Platform</span></div></div>
         <div class="sidebar-user">
             <div class="uav bg-purple" id="sbAvatar">CA</div>
@@ -705,6 +742,9 @@
 
     <main class="main-content">
         <div class="topbar">
+            <div class="mob-menu-btn" onclick="openMobileSidebar()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </div>
             <div class="page-title"><h1 id="pageTitle">Dashboard</h1><p id="pageSubtitle">Welcome back</p></div>
             <div class="tb-actions">
                 <div class="tb-btn" onclick="openModal('mNotifs')" title="Notifications">
@@ -1239,6 +1279,15 @@ function loadSavedTheme() {
 let AppState = { currentUser:null, activeIntKey:null, acctFilter:'all', acctSearch:'', currentAcctId:null, managingMember:null };
 
 // ================================================================
+// USER STORE — holds registered accounts
+// ================================================================
+const USER_STORE = {
+    'chiamaka.anumba@company.com': { password:'Chiamaka123', name:'Chiamaka Anumba', role:'Customer Success Manager', initials:'CA', color:'bg-purple' },
+    'tobenna@company.com':         { password:'Tobenna123',  name:'Tobenna Ikenna',  role:'CS Manager',              initials:'TI', color:'bg-cyan'   },
+    'emeka@company.com':           { password:'Emeka123',    role:'Platform Administrator', name:'Emeka Okonkwo',    initials:'EO', color:'bg-amber'  }
+};
+
+// ================================================================
 // AUTH
 // ================================================================
 function switchTab(tab) {
@@ -1248,38 +1297,76 @@ function switchTab(tab) {
 }
 
 function quickLogin(key) {
+    // Quick pills bypass validation for demo convenience only
     AppState.currentUser = {...USERS[key]};
     animateSignIn();
 }
 
 function handleSignin() {
+    const email = document.getElementById('lgEmail').value.trim().toLowerCase();
+    const pass  = document.getElementById('lgPass').value;
+
+    if (!email) { showAuthError('Please enter your email address'); return; }
+    if (!pass)  { showAuthError('Please enter your password'); return; }
+
+    const user = USER_STORE[email];
+    if (!user) { showAuthError('No account found with that email'); return; }
+    if (user.password !== pass) { showAuthError('Incorrect password. Please try again'); return; }
+
     const btn = document.getElementById('signinBtn');
     document.getElementById('signinBtnTxt').innerHTML = '<div class="spinner"></div>';
     btn.disabled = true;
     setTimeout(() => {
         document.getElementById('signinBtnTxt').textContent = 'Sign In';
         btn.disabled = false;
-        AppState.currentUser = {...USERS['chiamaka']};
+        AppState.currentUser = { name:user.name, role:user.role, email, initials:user.initials, color:user.color };
         animateSignIn();
-    }, 1100);
+    }, 900);
 }
 
 function handleSignup() {
-    const name = document.getElementById('suName').value.trim();
-    const email = document.getElementById('suEmail').value.trim();
+    const name  = document.getElementById('suName').value.trim();
+    const email = document.getElementById('suEmail').value.trim().toLowerCase();
     const pass  = document.getElementById('suPass').value;
-    if (!name||!email||!pass) { showToast('Please complete all fields','error'); return; }
+    const role  = document.getElementById('suRole').value;
+
+    if (!name)  { showAuthError('Please enter your full name'); return; }
+    if (!email) { showAuthError('Please enter your email address'); return; }
+    if (!pass)  { showAuthError('Please create a password'); return; }
+    if (pass.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
+    if (USER_STORE[email]) { showAuthError('An account with that email already exists'); return; }
+
+    const parts    = name.split(' ');
+    const initials = (parts[0][0] + (parts[1] ? parts[1][0] : 'X')).toUpperCase();
+    const colors   = ['bg-purple','bg-cyan','bg-green','bg-amber'];
+    const color    = colors[Math.floor(Math.random() * colors.length)];
+
     const btn = document.getElementById('signupBtn');
     document.getElementById('signupBtnTxt').innerHTML = '<div class="spinner"></div>';
     btn.disabled = true;
+
     setTimeout(() => {
         document.getElementById('signupBtnTxt').textContent = 'Create Account';
         btn.disabled = false;
-        const parts = name.split(' ');
-        AppState.currentUser = { name, email, role: document.getElementById('suRole').value, initials:(parts[0][0]+(parts[1]?parts[1][0]:'X')).toUpperCase(), color:'bg-purple' };
-        showToast('Account created!','success');
+        // Register user
+        USER_STORE[email] = { password: pass, name, role, initials, color };
+        AppState.currentUser = { name, email, role, initials, color };
+        showToast('Account created! Welcome to PulseIQ.', 'success');
         setTimeout(animateSignIn, 500);
-    }, 1300);
+    }, 1000);
+}
+
+function showAuthError(msg) {
+    let el = document.getElementById('authError');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'authError';
+        el.style.cssText = 'background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#F87171;font-size:13px;padding:10px 14px;border-radius:9px;margin-bottom:14px;text-align:center;';
+        const activeForm = document.querySelector('.auth-form.active');
+        activeForm.insertBefore(el, activeForm.firstChild);
+    }
+    el.textContent = msg;
+    setTimeout(() => { if (el) el.remove(); }, 4000);
 }
 
 function animateSignIn() {
@@ -1805,6 +1892,27 @@ function showToast(msg,type='info') {
     wrap.appendChild(t);
     setTimeout(()=>{t.style.transition='all 0.3s';t.style.opacity='0';t.style.transform='translateX(100px)';setTimeout(()=>t.remove(),300);},3800);
 }
+
+// ================================================================
+// MOBILE SIDEBAR
+// ================================================================
+function openMobileSidebar() {
+    document.getElementById('mainSidebar').classList.add('mob-open');
+    document.getElementById('sidebarOverlay').classList.add('mob-open');
+}
+function closeMobileSidebar() {
+    document.getElementById('mainSidebar').classList.remove('mob-open');
+    document.getElementById('sidebarOverlay').classList.remove('mob-open');
+}
+
+// Close sidebar on nav item click on mobile
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) closeMobileSidebar();
+        });
+    });
+});
 
 // ================================================================
 // INIT
